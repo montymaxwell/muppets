@@ -1,34 +1,36 @@
 import numpy
-import time
-import pyautogui
 import cv2 as cv
 import pytesseract
 from PIL import ImageGrab
 from threading import Thread
+from pynput.keyboard import Key, Controller
 
 # TESSERACT PATH CONFIG
 pytesseract.pytesseract.tesseract_cmd = r'C:\Tesseract\tesseract.exe'
 
 # SCREEN CAPTURE CONFIG
 # --- 1080p config ---
-# POSX = 20
-# POSY = 1000
-# WIN_WIDTH = 560
-# WIN_HEIGHT = 1025
+POSX = 20
+POSY = 1000
+WIN_WIDTH = 560
+WIN_HEIGHT = 1025
 # ---  720p Config ---
 # NOTE: Valorant must be windowed but maximized
-POSX = 110
-POSY = 950 # 950
-WIN_WIDTH = 490
-WIN_HEIGHT = 970
+# POSX = 10
+# POSY = 950
+# WIN_WIDTH = 490
+# WIN_HEIGHT = 970
+
+KEYBOARD = Controller()
 
 action_queue = []
 subaction_queue = []
 
-def press(key: str, duration: int):
-    start = time.time()
-    while time.time() - start < duration:
-        pyautogui.press(key)
+def press(key: Key, count: int):
+    for i in range(count):
+        print(i)
+        KEYBOARD.press(key=key)
+    KEYBOARD.release(key=key)
 
 def parser(text: str) -> str:
     arr = text.split(":")
@@ -41,42 +43,41 @@ def fps_movement(commanddata: str) -> bool:
         if cmd[1] == "forward":
             if len(cmd) == 3 and cmd[2]:
                 steps = int(cmd[2])
-            
-            press("w", steps)
+            press('w', steps)
             return True
 
         elif cmd[1] == "left":
             if len(cmd) == 3 and cmd[2]:
                 steps = int(cmd[2])
-
             press("a", steps)
             return True
 
         elif cmd[1] == "right":
             if len(cmd) == 3 and cmd[2]:
                 steps = int(cmd[2])
-
             press("d", steps)
             return True
 
         elif cmd[1] == "back":
             if len(cmd) == 3 and cmd[2]:
                 steps = int(cmd[2])
-
             press("s", steps)
             return True
 
         else: return False
 
-def action_handler():
+def action_event():
     while True:
-        if(len(action_queue) > 0):
+        if len(action_queue) > 0:
             action: str = action_queue.pop(0)
-            print(len(action_queue))
             print(action)
             fps_movement(commanddata=parser(text=action))
 
-def main():
+if __name__=='__main__':
+    # action_thread = Thread(target=action_event)
+    # action_thread.daemon = True
+    # action_thread.start()
+
     last_text: str = ""
     current_text: str = ""
     while True:
@@ -94,12 +95,8 @@ def main():
                         # i want to play songs through microphone
                     pass
                 elif("_move" in last_text):
-                    action_queue.append(last_text.strip())
-                elif("_action" in last_text):
-                    subaction_queue.append(last_text.strip())
-                elif("_stop" in last_text):
-                    
-                    pass
+                    print(last_text.strip())
+                    fps_movement(commanddata=parser(text=last_text.strip()))
                 else: pass
             else: pass
         else:
@@ -108,13 +105,3 @@ def main():
         if(cv.waitKey(1) == ord('q')):
             cv.destroyAllWindows()
             break
-
-
-if __name__=='__main__':
-    main_thread = Thread(target=main)
-    main_thread.start()
-
-    action_handler_thread = Thread(target=action_handler)
-    action_handler_thread.daemon = True
-    action_handler_thread.start()
-    action_handler_thread.join()
